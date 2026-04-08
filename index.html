@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-DIAGNOSIS Pro-Clinical Suite v4</title>
+    <style>
+        :root {
+            --bg: #f8fafc; --card: #ffffff; --text: #1e293b;
+            --primary: #2563eb; --accent: #3b82f6; --danger: #ef4444;
+            --warning: #f59e0b; --success: #10b981; --border: #e2e8f0;
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a; --card: #1e293b; --text: #f1f5f9;
+            --primary: #3b82f6; --accent: #60a5fa; --border: #334155;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; transition: 0.3s; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px; background: var(--card); border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 20px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .card { background: var(--card); border-radius: 12px; padding: 20px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .timer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .timer-box { text-align: center; padding: 10px; background: rgba(59, 130, 246, 0.08); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2); }
+        .timer-val { font-family: 'Courier New', monospace; font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 10px; }
+        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; opacity: 0.8; }
+        input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); box-sizing: border-box; font-weight: 500; }
+        .result-panel { background: #0f172a; color: #fff; padding: 20px; border-radius: 8px; margin-top: 15px; border-left: 5px solid var(--accent); }
+        .flash { animation: flash-anim 0.8s infinite linear; color: var(--danger); font-weight: 800; }
+        @keyframes flash-anim { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .btn { cursor: pointer; border: none; padding: 10px; border-radius: 6px; font-weight: 700; transition: 0.2s; color: white; }
+        .btn-primary { background: var(--primary); width: 100%; }
+        .btn-stop { background: var(--danger); width: 100%; }
+        .btn-ghost { background: #64748b; font-size: 0.8rem; }
+        .info-list { font-size: 0.85rem; line-height: 1.6; padding-left: 1.2rem; }
+        .badge { background: var(--primary); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-right: 5px; color: white; }
+    </style>
+</head>
+<body data-theme="light">
+
+<div class="container">
+    <div class="header">
+        <div>
+            <h1 id="title">E-DIAGNOSIS Clinical Suite</h1>
+            <small id="subtitle">Advanced ACT Management System</small>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <select id="lang" onchange="changeLang()" style="width: auto;">
+                <option value="tr">Türkçe</option>
+                <option value="en">English</option>
+                <option value="zh">中文 (Chinese)</option>
+            </select>
+            <button class="btn btn-ghost" onclick="toggleTheme()">🌓</button>
+            <button class="btn btn-ghost" id="btnNew" onclick="resetVaka()">YENİ VAKA</button>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="timer-grid">
+                <div class="timer-box">
+                    <label id="lblCase">Vaka Süresi</label>
+                    <div id="caseVal" class="timer-val">00:00:00</div>
+                    <button class="btn btn-primary" id="btnCase" onclick="toggleT('case')">Başlat</button>
+                </div>
+                <div class="timer-box">
+                    <label id="lblPump">Pompa Süresi</label>
+                    <div id="pumpVal" class="timer-val">00:00:00</div>
+                    <button class="btn btn-primary" id="btnPump" onclick="toggleT('pump')">Başlat</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <div><label id="lblKg">Kilo (kg)</label><input type="number" id="kg" oninput="run()"></div>
+                <div><label id="lblBase">Bazal ACT (sn)</label><input type="number" id="base" oninput="run()"></div>
+            </div>
+            <div class="input-group">
+                <div><label id="lblCurr">Anlık ACT (sn)</label><input type="number" id="curr" oninput="run()"></div>
+                <div><label id="lblExtra">İlave Heparin (IU)</label><input type="number" id="extra" value="0" oninput="run()"></div>
+            </div>
+            <label id="lblPost">Protamin Sonrası ACT (sn)</label>
+            <input type="number" id="post" oninput="run()">
+
+            <div class="result-panel">
+                <div id="status" style="text-align: center; margin-bottom: 10px; min-height: 1.5em; font-weight: bold;">SİSTEM HAZIR</div>
+                <div id="recomHeparin" style="color: #fbbf24; text-align: center; font-size: 0.9rem; margin-bottom: 10px;"></div>
+                
+                <div style="font-size: 0.85rem; opacity: 0.9; border-top: 1px solid #334155; padding-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span id="resTotal">Toplam Akümüle Heparin:</span>
+                        <span id="dispTotal" style="color: var(--accent); font-weight: bold;">0 IU</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1rem; color: #fff;">
+                        <span id="resProt">Gereken Protamin (1:100):</span>
+                        <span id="dispProt" style="color: var(--success);">0 mg</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="converter-section">
+                <h4 id="h4Conv" style="margin: 15px 0 8px 0; font-size: 0.8rem; text-transform: uppercase;">Birim Çevirici</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                    <input type="number" id="cIU" placeholder="IU" oninput="conv('IU')">
+                    <input type="number" id="cMG" placeholder="mg" oninput="conv('MG')">
+                    <input type="number" id="cCC" placeholder="cc" oninput="conv('CC')">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 id="infoTitle">E-DIAGNOSIS Klinik Bilgilendirme</h2>
+            <ul class="info-list" id="infoContent">
+                </ul>
+
+            <h3 id="limitTitle" style="margin-top: 20px;">Güvenlik & Tolerans Limitleri</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                <tr style="border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02);">
+                    <th id="thParam" style="padding: 10px; text-align: left;">Parametre</th>
+                    <th id="thTarget" style="padding: 10px; text-align: left;">Hedef</th>
+                    <th id="thTol" style="padding: 10px; text-align: left;">Tolerans</th>
+                </tr>
+                <tr><td id="tdPump" style="padding: 10px;">Pompa (CPB)</td><td style="font-weight: bold;">> 450 sn</td><td id="tdCrit">Kritik Eşik</td></tr>
+                <tr><td id="tdNeut" style="padding: 10px;">Nötralizasyon</td><td id="tdBaseVal" style="font-weight: bold;">Bazal ACT</td><td>± %15</td></tr>
+            </table>
+            
+            <div id="bottomWarning" style="margin-top: 20px; padding: 15px; border-radius: 8px; background: rgba(239, 68, 68, 0.08); border-left: 4px solid var(--danger); font-size: 0.85rem;">
+                </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let lang = "tr";
+let timers = { case: { s: 0, run: false, int: null }, pump: { s: 0, run: false, int: null } };
+
+const translations = {
+    tr: {
+        title: "E-DIAGNOSIS Klinik Panel", sub: "Gelişmiş ACT Yönetim Sistemi", new: "YENİ VAKA", start: "Başlat", stop: "Durdur", kg: "Kilo (kg)", base: "Bazal ACT (sn)", curr: "Anlık ACT (sn)", extra: "İlave Heparin (IU)", post: "Protamin Sonrası ACT (sn)", total: "Toplam Akümüle Heparin:", reqP: "Gereken Protamin (1:100):", conv: "Birim Çevirici (1cc=5k IU)", infoT: "E-DIAGNOSIS Klinik Bilgilendirme", limitT: "Güvenlik & Tolerans Limitleri", ready: "SİSTEM HAZIR", pumpErr: "!!! KRİTİK: ACT < 450 !!!", neutErr: "LİMİT DIŞI!", ok: "BAZAL SAĞLANDI", rec: "Önerilen Ek Heparin: ", reset: "Tüm veriler temizlenecek. Devam edilsin mi?",
+        p1: "<b>R²=0.925 Analitik Tutarlılık:</b> E-DIAGNOSIS stripleri referans sistemlerle %92.5 uyumludur.",
+        p2: "<b>Doğrusallık:</b> y = 55.04 + 0.96x denklemi öngörülebilir bir takip sağlar.",
+        p3: "<b>Pompa Eşiği:</b> CPB esnasında >450 sn mikrotrombüs riskine karşı kritik alt sınırdır.",
+        p4: "<b>Akümüle Doz:</b> Protamin hesabı, verilen tüm heparin dozlarının toplamı üzerinden yapılır.",
+        warn: "<strong>SİSTEMİK UYARI:</strong> ACT < 450 sn olduğunda pıhtılaşma riski artar. Sistem 75 IU/kg ek doz önerir."
+    },
+    en: {
+        title: "E-DIAGNOSIS Clinical Suite", sub: "Advanced ACT Management System", new: "NEW CASE", start: "Start", stop: "Stop", kg: "Weight (kg)", base: "Base ACT (s)", curr: "Current ACT (s)", extra: "Extra Heparin (IU)", post: "Post-Protamine ACT (s)", total: "Total Accumulated Heparin:", reqP: "Req. Protamine (1:100):", conv: "Unit Converter (1cc=5k IU)", infoT: "Clinical Information", limitT: "Safety & Tolerance Limits", ready: "SYSTEM READY", pumpErr: "!!! CRITICAL: ACT < 450 !!!", neutErr: "OUT OF LIMITS!", ok: "BASE REACHED", rec: "Suggested Extra Heparin: ", reset: "All data will be cleared. Continue?",
+        p1: "<b>R²=0.925 Consistency:</b> Strips are 92.5% consistent with reference systems.",
+        p2: "<b>Linearity:</b> y = 55.04 + 0.96x ensures predictable monitoring.",
+        p3: "<b>Pump Threshold:</b> >450s is critical to prevent microthrombi during CPB.",
+        p4: "<b>Accumulated Dose:</b> Protamine is calculated based on total administered heparin.",
+        warn: "<strong>CRITICAL WARNING:</strong> If ACT < 450s, clotting risk increases. System suggests 75 IU/kg dose."
+    },
+    zh: {
+        title: "E-DIAGNOSIS 临床管理系统", sub: "高级 ACT 管理系统", new: "新病例", start: "开始", stop: "停止", kg: "体重 (kg)", base: "基础 ACT (秒)", curr: "实时 ACT (秒)", extra: "额外肝素 (IU)", post: "鱼精蛋白后 ACT (秒)", total: "总累积肝素量:", reqP: "所需鱼精蛋白 (1:100):", conv: "单位转换器 (1cc=5k IU)", infoT: "E-DIAGNOSIS 临床信息", limitT: "安全与容差限制", ready: "系统就绪", pumpErr: "!!! 严重警告: ACT < 450 !!!", neutErr: "超出限制!", ok: "达到基础值", rec: "建议增加肝素: ", reset: "所有数据将被清除。是否继续？",
+        p1: "<b>R²=0.925 分析一致性:</b> 测试条与参考系统的一致性达 92.5%。",
+        p2: "<b>线性关系:</b> y = 55.04 + 0.96x 公式确保了监测的可预测性。",
+        p3: "<b>泵阈值:</b> CPB 期间 >450s 是防止微血栓形成的关键下限。",
+        p4: "<b>累积剂量:</b> 鱼精蛋白量根据所有已注射肝素的总量计算。",
+        warn: "<strong>系统警报:</strong> 当 ACT < 450s 时，血栓风险增加。系统建议增加 75 IU/kg 肝素。"
+    }
+};
+
+function changeLang() {
+    lang = document.getElementById('lang').value;
+    const t = translations[lang];
+    document.getElementById('title').innerText = t.title;
+    document.getElementById('subtitle').innerText = t.sub;
+    document.getElementById('btnNew').innerText = t.new;
+    document.getElementById('lblCase').innerText = lang==='zh' ? "手术时间" : t.start.replace("Başlat", "Vaka Süresi"); // Simplified for brevity
+    document.getElementById('lblCase').innerText = lang==='tr' ? "Vaka Süresi" : (lang==='en' ? "Case Time" : "手术时间");
+    document.getElementById('lblPump').innerText = lang==='tr' ? "Pompa Süresi" : (lang==='en' ? "Pump Time" : "转流时间");
+    document.getElementById('lblKg').innerText = t.kg;
+    document.getElementById('lblBase').innerText = t.base;
+    document.getElementById('lblCurr').innerText = t.curr;
+    document.getElementById('lblExtra').innerText = t.extra;
+    document.getElementById('lblPost').innerText = t.post;
+    document.getElementById('resTotal').innerText = t.total;
+    document.getElementById('resProt').innerText = t.reqP;
+    document.getElementById('h4Conv').innerText = t.conv;
+    document.getElementById('infoTitle').innerText = t.infoT;
+    document.getElementById('limitTitle').innerText = t.limitT;
+    document.getElementById('infoContent').innerHTML = `<li>${t.p1}</li><li>${t.p2}</li><li>${t.p3}</li><li>${t.p4}</li>`;
+    document.getElementById('bottomWarning').innerHTML = t.warn;
+    run();
+}
+
+function toggleTheme() { document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+function resetVaka() { if(confirm(translations[lang].reset)) location.reload(); }
+
+function toggleT(type) {
+    let t = timers[type]; t.run = !t.run;
+    let btn = document.getElementById('btn' + type.charAt(0).toUpperCase() + type.slice(1));
+    if(t.run) {
+        btn.innerText = translations[lang].stop; btn.className = "btn btn-stop";
+        t.int = setInterval(() => {
+            t.s++;
+            let h = Math.floor(t.s/3600).toString().padStart(2,'0'), m = Math.floor((t.s%3600)/60).toString().padStart(2,'0'), s = (t.s%60).toString().padStart(2,'0');
+            document.getElementById(type + 'Val').innerText = `${h}:${m}:${s}`;
+        }, 1000);
+    } else {
+        clearInterval(t.int); btn.innerText = translations[lang].start; btn.className = "btn btn-primary";
+    }
+}
+
+function conv(from) {
+    const i = document.getElementById('cIU'), m = document.getElementById('cMG'), c = document.getElementById('cCC');
+    if(from==='IU'){ m.value=i.value/100; c.value=i.value/5000; }
+    if(from==='MG'){ i.value=m.value*100; c.value=m.value/50; }
+    if(from==='CC'){ i.value=c.value*5000; m.value=c.value*50; }
+}
+
+function run() {
+    const w = parseFloat(document.getElementById('kg').value) || 0;
+    const b = parseFloat(document.getElementById('base').value) || 0;
+    const c = parseFloat(document.getElementById('curr').value) || 0;
+    const ex = parseFloat(document.getElementById('extra').value) || 0;
+    const p = parseFloat(document.getElementById('post').value) || 0;
+
+    const totalHep = (w * 300) + ex;
+    document.getElementById('dispTotal').innerText = totalHep.toLocaleString() + " IU";
+    document.getElementById('dispProt').innerText = (totalHep / 100).toFixed(1) + " mg";
+
+    const st = document.getElementById('status');
+    const rec = document.getElementById('recomHeparin');
+    st.className = ""; st.innerText = translations[lang].ready;
+    rec.innerText = "";
+
+    if(timers.pump.run && c > 0 && c < 450) {
+        st.innerText = translations[lang].pumpErr; st.className = "flash";
+        const suggest = Math.round(w * 75);
+        rec.innerText = translations[lang].rec + suggest.toLocaleString() + " IU (" + (suggest/5000).toFixed(1) + " cc)";
+    }
+    if(p > 0 && b > 0) {
+        if(p < b*0.85 || p > b*1.15) { st.innerText = translations[lang].neutErr; st.className = "flash"; }
+        else { st.innerText = translations[lang].ok; }
+    }
+}
+// Init
+changeLang();
+</script>
+</body>
+</html>
